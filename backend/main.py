@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import engine, Base, get_db
 import models
 import schemas
@@ -55,3 +56,16 @@ def delete_problem(problem_id: int, db: Session = Depends(get_db)):
     db.delete(entry)
     db.commit()
     return {"message": "Deleted successfully"}
+
+
+@app.get("/stats")
+def get_stats(db: Session = Depends(get_db)):
+    by_pattern = db.query(models.ProblemEntry.pattern, func.count(models.ProblemEntry.id)).group_by(models.ProblemEntry.pattern).all()
+    by_difficulty = db.query(models.ProblemEntry.difficulty, func.count(models.ProblemEntry.id)).group_by(models.ProblemEntry.difficulty).all()
+    by_status = db.query(models.ProblemEntry.status, func.count(models.ProblemEntry.id)).group_by(models.ProblemEntry.status).all()
+
+    return {
+        "by_pattern": {pattern: count for pattern, count in by_pattern},
+        "by_difficulty": {difficulty: count for difficulty, count in by_difficulty},
+        "by_status": {status: count for status, count in by_status},
+    }
